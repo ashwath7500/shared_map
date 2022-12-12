@@ -11,5 +11,6 @@ int main () {
 	m1["helo"] = 4;
 	cout<<m2["helo"]<<"\n";
 	cout<<m1["helo"]<<" "<<m2["helo"]<<"\n";
+	cout<<m1["helo"]+ 5 +m2["helo"]<<"\n";
 	return 0;
 }

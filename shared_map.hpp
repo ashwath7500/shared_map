@@ -6,37 +6,42 @@ using namespace std;
 constexpr int max_depth = 5;
 
 template<typename key, typename value_t>
+struct shared_map;
+
+template<typename key, typename value_t>
+struct map_object{
+	typedef shared_map<key, value_t> smap;
+	value_t ele;
+	key ki;
+	smap* map_p;
+	operator value_t() const {
+		return ele;
+	}
+	const value_t& operator=(const value_t& val) {
+		map_p->insert(ki,val);
+		return val;
+	}
+};
+
+template<typename key, typename value_t>
 struct fragment{
 	shared_ptr<fragment> parent;
 	unordered_map<key, value_t> u_map;
-	unordered_map<key, value_t> m_map;
 	unordered_set<key> deleted_keys;
 	fragment absolute_fragment() {
 		fragment ret;
 		if (parent) ret = parent->absolute_fragment();
 		for (auto& it : deleted_keys) ret.u_map.erase(it);
 		for (auto& it : u_map) ret.u_map.insert(it);
-		for (auto& it : m_map) {
-			ret.u_map[it.first] = it.second;
-		}
 		return ret;
 	}
- 	value_t& find(key k) {
+ 	value_t find(key k) {
 		if (u_map.find(k) != u_map.end()) {
 			return u_map[k];
 		}
-		if (m_map.find(k) != m_map.end()) {
-			return m_map[k];
-		}
-		if (parent)
-		  m_map[k] = parent->find(k);
-		return m_map[k];
-	}
-	void update_values() {
-		for (auto it:m_map) {
-			u_map[it.first] = it.second;
-		}
-		m_map.clear();
+        value_t vt;
+		if (!parent) return vt;
+		return parent->find(k);
 	}
 	~fragment() {
 		cout<<"gone\n";
@@ -57,11 +62,13 @@ struct shared_map{
 	void insert(key k, value_t value) {
 		if (head.use_count() > 1) this->new_head();
 		head->u_map[k] = value;
-		head->m_map[k] = value;
 	}
-	value_t& operator[](key k) {
-		if (head.use_count() > 1) this->new_head();
-		return head->find(k);
+	map_object<key, value_t> operator[](key k) {
+		map_object<key, value_t> ret;
+		ret.ki = k;
+		ret.ele = head->find(k);
+        ret.map_p = this;
+        return ret;
 	}
 	void new_head() {
 		if (depth < max_depth) {
@@ -73,9 +80,6 @@ struct shared_map{
 		else  {
 			head = make_shared<frag>(head->absolute_fragment());
 		}
-	}
-	void finish_iteration() {
-		head->update_values();
 	}
 	int depth;
 	shared_ptr<frag> head;
